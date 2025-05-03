@@ -1,0 +1,19 @@
+{
+    "name": "dmsl",
+    "version": "1.0.0",
+    "description": "Short description here",
+    "main": "index.js",
+    "bin": {
+        "your-command": "index.js"
+    },
+    "author": "Your Name",
+    "license": "MIT",
+    "keywords": [
+        "cli",
+        "tool"
+    ],
+    "private": false,
+    "dependencies": {
+        "dmsl": "file:"
+    }
+}
