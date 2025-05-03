@@ -1,0 +1,169 @@
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 1) DDL: Define tables and relationships
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> CREATE TABLE dept (
+    ->   dept_no   INT           PRIMARY KEY,
+    ->   dname     VARCHAR(50)   NOT NULL,
+    ->   loc       VARCHAR(50)   NOT NULL
+    -> );
+Query OK, 0 rows affected (0.03 sec)
+
+mysql>
+mysql> CREATE TABLE project (
+    ->   proj_no    INT           PRIMARY KEY,
+    ->   proj_name  VARCHAR(100)  NOT NULL,
+    ->   status     VARCHAR(20)   NOT NULL
+    -> );
+Query OK, 0 rows affected (0.05 sec)
+
+mysql>
+mysql> CREATE TABLE emp (
+    ->   emp_no       INT           PRIMARY KEY,
+    ->   ename        VARCHAR(100)  NOT NULL,
+    ->   designation  VARCHAR(50)   NOT NULL,
+    ->   sal          DECIMAL(10,2) NOT NULL,
+    ->   dept_no      INT           NOT NULL,
+    ->   proj_no      INT           NOT NULL,
+    ->   FOREIGN KEY(dept_no)  REFERENCES dept(dept_no),
+    ->   FOREIGN KEY(proj_no)  REFERENCES project(proj_no)
+    -> );
+Query OK, 0 rows affected (0.07 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 2) DML: Insert sample data
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- Departments
+mysql> INSERT INTO dept (dept_no, dname,     loc) VALUES
+    ->   (10,    'INVENTORY', 'PUNE'),
+    ->   (20,    'MARKETING', 'MUMBAI'),
+    ->   (30,    'HR',        'DELHI');
+Query OK, 3 rows affected (0.01 sec)
+Records: 3  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Projects
+mysql> INSERT INTO project (proj_no, proj_name,            status) VALUES
+    ->   (1,       'Blood Bank',           'INCOMPLETE'),
+    ->   (2,       'Inventory System',     'COMPLETE'),
+    ->   (3,       'Marketing Campaign',   'INCOMPLETE');
+Query OK, 3 rows affected (0.01 sec)
+Records: 3  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Employees
+mysql> INSERT INTO emp (emp_no, ename,  designation, sal,    dept_no, proj_no) VALUES
+    ->   (101,    'Alice',   'CLERK',      2000.00, 10,      2),  -- Inventory/Pune, complete
+    ->   (102,    'Bob',     'MANAGER',    5000.00, 20,      3),  -- Marketing/Mumbai, incomplete
+    ->   (103,    'Carol',   'ANALYST',    3000.00, 10,      1),  -- Inventory/Pune, incomplete (Blood Bank)
+    ->   (104,    'Dave',    'CLERK',      1800.00, 20,      1),  -- Marketing/Mumbai, incomplete (Blood Bank)
+    ->   (105,    'Eve',     'MANAGER',    5500.00, 20,      1),  -- Marketing/Mumbai, incomplete (Blood Bank)
+    ->   (106,    'Frank',   'CLERK',      2100.00, 10,      3);  -- Inventory/Pune, incomplete (Marketing Campaign)
+Query OK, 6 rows affected (0.01 sec)
+Records: 6  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 3) DQL: The required queries
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- i)  List all employees of ‘INVENTORY’ department at ‘PUNE’
+mysql> SELECT e.ename
+    -> FROM emp e
+    -> JOIN dept d ON e.dept_no = d.dept_no
+    -> WHERE d.dname = 'INVENTORY'
+    ->   AND d.loc   = 'PUNE'
+    -> ;
++-------+
+| ename |
++-------+
+| Alice |
+| Carol |
+| Frank |
++-------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ii) Names of employees working on ‘Blood Bank’ project
+mysql> SELECT DISTINCT e.ename
+    -> FROM emp e
+    -> JOIN project p ON e.proj_no = p.proj_no
+    -> WHERE p.proj_name = 'Blood Bank'
+    -> ;
++-------+
+| ename |
++-------+
+| Carol |
+| Dave  |
+| Eve   |
++-------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- iii) Names of MANAGERs in the ‘MARKETING’ department
+mysql> SELECT e.ename
+    -> FROM emp e
+    -> JOIN dept d ON e.dept_no = d.dept_no
+    -> WHERE e.designation = 'MANAGER'
+    ->   AND d.dname       = 'MARKETING'
+    -> ;
++-------+
+| ename |
++-------+
+| Bob   |
+| Eve   |
++-------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- iv) All employees on projects whose status = ‘INCOMPLETE’
+mysql> SELECT DISTINCT e.ename
+    -> FROM emp e
+    -> JOIN project p ON e.proj_no = p.proj_no
+    -> WHERE p.status = 'INCOMPLETE'
+    -> ;
++-------+
+| ename |
++-------+
+| Carol |
+| Dave  |
+| Eve   |
+| Bob   |
+| Frank |
++-------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 4) Procedure: Update salaries per given rules
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE UpdateSalRules()
+    -> BEGIN
+    ->   -- CLERKs in dept 10 get +20%
+    ->   UPDATE emp
+    ->   SET sal = sal * 1.20
+    ->   WHERE designation = 'CLERK'
+    ->     AND dept_no     = 10
+    ->   ;
+    ->
+    ->   -- MANAGERs in dept 20 get +5%
+    ->   UPDATE emp
+    ->   SET sal = sal * 1.05
+    ->   WHERE designation = 'MANAGER'
+    ->     AND dept_no     = 20
+    ->   ;
+    -> END$$
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> -- To execute the procedure:
+mysql> -- CALL UpdateSalRules();
+mysql>   ;

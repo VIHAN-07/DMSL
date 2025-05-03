@@ -1,0 +1,219 @@
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 1) DDL: Create tables with integrity constraints
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> CREATE TABLE customer (
+    ->   cust_id    INT            PRIMARY KEY,
+    ->   cust_name  VARCHAR(100)   NOT NULL
+    -> );
+Query OK, 0 rows affected (0.11 sec)
+
+mysql>
+mysql> CREATE TABLE item (
+    ->   item_id    INT            PRIMARY KEY,
+    ->   item_name  VARCHAR(100)   NOT NULL,
+    ->   price      INT            NOT NULL
+    -> );
+Query OK, 0 rows affected (0.12 sec)
+
+mysql>
+mysql> CREATE TABLE sale (
+    ->   bill_no     INT            NOT NULL,
+    ->   bill_date   DATE           NOT NULL,
+    ->   cust_id     INT            NOT NULL,
+    ->   item_id     INT            NOT NULL,
+    ->   qty_sold    INT            NOT NULL,
+    ->   PRIMARY KEY (bill_no, item_id),
+    ->   FOREIGN KEY (cust_id) REFERENCES customer(cust_id),
+    ->   FOREIGN KEY (item_id) REFERENCES item(item_id)
+    -> );
+Query OK, 0 rows affected (0.13 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 2) DML: Insert ~10 records in each table
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- Customers
+mysql> INSERT INTO customer (cust_id, cust_name) VALUES
+    ->   (1,  'Alice'),
+    ->   (2,  'Bob'),
+    ->   (3,  'Carol'),
+    ->   (4,  'Dave'),
+    ->   (5,  'Eve'),
+    ->   (6,  'Frank'),
+    ->   (7,  'Grace'),
+    ->   (8,  'Heidi'),
+    ->   (9,  'Ivan'),
+    ->   (10, 'Judy');
+Query OK, 10 rows affected (0.02 sec)
+Records: 10  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Items
+mysql> INSERT INTO item (item_id, item_name, price) VALUES
+    ->   (1,  'Pen',            50),
+    ->   (2,  'Notebook',      150),
+    ->   (3,  'Backpack',      300),
+    ->   (4,  'Calculator',    250),
+    ->   (5,  'Folder',         75),
+    ->   (6,  'Stapler',       225),
+    ->   (7,  'Marker',         40),
+    ->   (8,  'Desk Lamp',     400),
+    ->   (9,  'Chair',         800),
+    ->   (10, 'Desk',         1200);
+Query OK, 10 rows affected (0.02 sec)
+Records: 10  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Sales
+mysql> -- (Assume today = '2025-05-03')
+mysql> INSERT INTO sale (bill_no, bill_date, cust_id, item_id, qty_sold) VALUES
+    ->   (1001, '2025-05-03', 5,  3, 2),
+    ->   (1001, '2025-05-03', 5,  8, 1),
+    ->   (1002, '2025-05-02', 1,  4, 5),
+    ->   (1003, '2025-05-03', 2,  6, 1),
+    ->   (1003, '2025-05-03', 2,  7, 3),
+    ->   (1004, '2025-05-03', 9, 10, 2),
+    ->   (1005, '2025-05-01',10,  2, 1),
+    ->   (1006, '2025-05-03', 4,  1, 1),
+    ->   (1007, '2025-05-03', 8,  9, 2),
+    ->   (1008, '2025-05-02', 3,  5, 4),
+    ->   (1009, '2025-05-03', 7,  4, 2),
+    ->   (1010, '2025-05-03', 6,  3, 3);
+Query OK, 12 rows affected (0.03 sec)
+Records: 12  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 3) DQL: Required queries
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- (c) List all the bills for today with customer names and item numbers
+mysql> SELECT
+    ->   s.bill_no,
+    ->   s.bill_date,
+    ->   c.cust_name,
+    ->   s.item_id
+    -> FROM sale   AS s
+    -> JOIN customer AS c ON s.cust_id = c.cust_id
+    -> WHERE s.bill_date = CURDATE()
+    -> ;
++---------+------------+-----------+---------+
+| bill_no | bill_date  | cust_name | item_id |
++---------+------------+-----------+---------+
+|    1001 | 2025-05-03 | Eve       |       3 |
+|    1001 | 2025-05-03 | Eve       |       8 |
+|    1003 | 2025-05-03 | Bob       |       6 |
+|    1003 | 2025-05-03 | Bob       |       7 |
+|    1004 | 2025-05-03 | Ivan      |      10 |
+|    1006 | 2025-05-03 | Dave      |       1 |
+|    1007 | 2025-05-03 | Heidi     |       9 |
+|    1009 | 2025-05-03 | Grace     |       4 |
+|    1010 | 2025-05-03 | Frank     |       3 |
++---------+------------+-----------+---------+
+9 rows in set (0.00 sec)
+
+mysql>
+mysql> -- (d) List total bill details with qty sold, price, and final amount (per line)
+mysql> SELECT
+    ->   s.bill_no,
+    ->   s.item_id,
+    ->   s.qty_sold,
+    ->   i.price,
+    ->   (s.qty_sold * i.price) AS final_amount
+    -> FROM sale AS s
+    -> JOIN item AS i ON s.item_id = i.item_id
+    -> ;
++---------+---------+----------+-------+--------------+
+| bill_no | item_id | qty_sold | price | final_amount |
++---------+---------+----------+-------+--------------+
+|    1006 |       1 |        1 |    50 |           50 |
+|    1005 |       2 |        1 |   150 |          150 |
+|    1001 |       3 |        2 |   300 |          600 |
+|    1010 |       3 |        3 |   300 |          900 |
+|    1002 |       4 |        5 |   250 |         1250 |
+|    1009 |       4 |        2 |   250 |          500 |
+|    1008 |       5 |        4 |    75 |          300 |
+|    1003 |       6 |        1 |   225 |          225 |
+|    1003 |       7 |        3 |    40 |          120 |
+|    1001 |       8 |        1 |   400 |          400 |
+|    1007 |       9 |        2 |   800 |         1600 |
+|    1004 |      10 |        2 |  1200 |         2400 |
++---------+---------+----------+-------+--------------+
+12 rows in set (0.05 sec)
+
+mysql>
+mysql> -- (e) Details of customers who bought a product priced > 200
+mysql> SELECT DISTINCT
+    ->   c.cust_id,
+    ->   c.cust_name
+    -> FROM customer AS c
+    -> JOIN sale     AS s ON c.cust_id = s.cust_id
+    -> JOIN item     AS i ON s.item_id  = i.item_id
+    -> WHERE i.price > 200
+    -> ;
++---------+-----------+
+| cust_id | cust_name |
++---------+-----------+
+|       5 | Eve       |
+|       6 | Frank     |
+|       1 | Alice     |
+|       7 | Grace     |
+|       2 | Bob       |
+|       8 | Heidi     |
+|       9 | Ivan      |
++---------+-----------+
+7 rows in set (0.00 sec)
+
+mysql>
+mysql> -- (f) Item details and total quantity sold as of today
+mysql> SELECT
+    ->   i.item_id,
+    ->   i.item_name,
+    ->   SUM(s.qty_sold) AS total_qty_sold
+    -> FROM item AS i
+    -> JOIN sale AS s ON i.item_id = s.item_id
+    -> WHERE s.bill_date = CURDATE()
+    -> GROUP BY i.item_id, i.item_name
+    -> ;
++---------+------------+----------------+
+| item_id | item_name  | total_qty_sold |
++---------+------------+----------------+
+|       3 | Backpack   |              5 |
+|       8 | Desk Lamp  |              1 |
+|       6 | Stapler    |              1 |
+|       7 | Marker     |              3 |
+|      10 | Desk       |              2 |
+|       1 | Pen        |              1 |
+|       9 | Chair      |              2 |
+|       4 | Calculator |              2 |
++---------+------------+----------------+
+8 rows in set (0.00 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 4) Procedure: List products bought by a given customer (e.g. cust_id = 5)
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE ProductsByCustomer(IN in_cust_id INT)
+    -> BEGIN
+    ->   SELECT DISTINCT
+    ->     i.item_id,
+    ->     i.item_name
+    ->   FROM sale AS s
+    ->   JOIN item AS i ON s.item_id = i.item_id
+    ->   WHERE s.cust_id = in_cust_id
+    ->   ;
+    -> END$$
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> -- To invoke for customer 5:
+mysql> -- CALL ProductsByCustomer(5);
+mysql>

@@ -1,0 +1,193 @@
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 1) DDL: Define tables & relationships for Video Library
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> CREATE TABLE customer (
+    ->   cust_no     INT            PRIMARY KEY,
+    ->   cust_name   VARCHAR(100)   NOT NULL
+    -> );
+Query OK, 0 rows affected (0.16 sec)
+
+mysql>
+mysql> CREATE TABLE membership (
+    ->   mem_no      INT            PRIMARY KEY,
+    ->   cust_no     INT            NOT NULL,
+    ->   FOREIGN KEY (cust_no) REFERENCES customer(cust_no)
+    -> );
+Query OK, 0 rows affected (0.06 sec)
+
+mysql>
+mysql> CREATE TABLE cassette (
+    ->   cass_no     INT            PRIMARY KEY,
+    ->   cass_name   VARCHAR(200)   NOT NULL,
+    ->   language    VARCHAR(50)    NOT NULL
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql>
+mysql> CREATE TABLE iss_rec (
+    ->   iss_no      INT            PRIMARY KEY,
+    ->   iss_date    DATE           NOT NULL,
+    ->   mem_no      INT            NOT NULL,
+    ->   cass_no     INT            NOT NULL,
+    ->   FOREIGN KEY (mem_no)  REFERENCES membership(mem_no),
+    ->   FOREIGN KEY (cass_no) REFERENCES cassette(cass_no)
+    -> );
+Query OK, 0 rows affected (0.08 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 2) DML: Insert sample data (remember to include DML for every scenario)
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- Customers
+mysql> INSERT INTO customer (cust_no, cust_name) VALUES
+    ->   (1, 'Alice'),
+    ->   (2, 'Bob'),
+    ->   (3, 'Carol'),
+    ->   (4, 'Dave');
+Query OK, 4 rows affected (0.01 sec)
+Records: 4  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Memberships
+mysql> INSERT INTO membership (mem_no, cust_no) VALUES
+    ->   (101, 1),
+    ->   (102, 2),
+    ->   (103, 3),
+    ->   (104, 4);
+Query OK, 4 rows affected (0.01 sec)
+Records: 4  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Cassettes
+mysql> INSERT INTO cassette (cass_no, cass_name, language) VALUES
+    ->   (201, 'The Legend',    'English'),
+    ->   (202, 'Fast Cars',     'English'),
+    ->   (203, 'Cooking 101',   'Hindi');
+Query OK, 3 rows affected (0.01 sec)
+Records: 3  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql> -- Issue Records
+mysql> -- Assume today is 2025‑05‑03
+mysql> INSERT INTO iss_rec (iss_no, iss_date, mem_no, cass_no) VALUES
+    ->   (301, '2025-05-03', 101, 201),
+    ->   (302, '2025-05-03', 102, 202),
+    ->   (303, '2025-05-02', 101, 203),
+    ->   (304, '2025-05-03', 103, 201),
+    ->   (305, '2025-05-03', 104, 203);
+Query OK, 5 rows affected (0.01 sec)
+Records: 5  Duplicates: 0  Warnings: 0
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 3) DQL: Required queries
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> -- a) List all customer names with their membership numbers
+mysql> SELECT c.cust_name,
+    ->        m.mem_no
+    -> FROM customer AS c
+    -> JOIN membership AS m ON m.cust_no = c.cust_no
+    -> ;
++-----------+--------+
+| cust_name | mem_no |
++-----------+--------+
+| Alice     |    101 |
+| Bob       |    102 |
+| Carol     |    103 |
+| Dave      |    104 |
++-----------+--------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- b) List all issues for TODAY with customer names and cassette names
+mysql> SELECT i.iss_no,
+    ->        i.iss_date,
+    ->        c.cust_name,
+    ->        cas.cass_name
+    -> FROM iss_rec AS i
+    -> JOIN membership  AS m   ON i.mem_no    = m.mem_no
+    -> JOIN customer    AS c   ON m.cust_no   = c.cust_no
+    -> JOIN cassette    AS cas ON i.cass_no   = cas.cass_no
+    -> WHERE i.iss_date = CURDATE()
+    -> ;
++--------+------------+-----------+-------------+
+| iss_no | iss_date   | cust_name | cass_name   |
++--------+------------+-----------+-------------+
+|    301 | 2025-05-03 | Alice     | The Legend  |
+|    302 | 2025-05-03 | Bob       | Fast Cars   |
+|    304 | 2025-05-03 | Carol     | The Legend  |
+|    305 | 2025-05-03 | Dave      | Cooking 101 |
++--------+------------+-----------+-------------+
+4 rows in set (0.01 sec)
+
+mysql>
+mysql> -- c) Details of the customer who borrowed the cassette titled “The Legend”
+mysql> SELECT DISTINCT c.cust_no,
+    ->                 c.cust_name
+    -> FROM customer AS c
+    -> JOIN membership AS m   ON m.cust_no = c.cust_no
+    -> JOIN iss_rec    AS i   ON i.mem_no  = m.mem_no
+    -> JOIN cassette   AS cas ON cas.cass_no = i.cass_no
+    -> WHERE cas.cass_name = 'The Legend'
+    -> ;
++---------+-----------+
+| cust_no | cust_name |
++---------+-----------+
+|       1 | Alice     |
+|       3 | Carol     |
++---------+-----------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- d) Count of how many cassettes have been borrowed by each customer
+mysql> SELECT c.cust_name,
+    ->        COUNT(*) AS total_borrowed
+    -> FROM customer AS c
+    -> JOIN membership  AS m   ON m.cust_no = c.cust_no
+    -> JOIN iss_rec     AS i   ON i.mem_no  = m.mem_no
+    -> GROUP BY c.cust_no, c.cust_name
+    -> ;
++-----------+----------------+
+| cust_name | total_borrowed |
++-----------+----------------+
+| Alice     |              2 |
+| Bob       |              1 |
+| Carol     |              1 |
+| Dave      |              1 |
++-----------+----------------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql>
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql> -- 4) Trigger: Cascade‐delete a customer’s related memberships & issues
+mysql> -- ─────────────────────────────────────────────────────────────────────────────
+mysql>
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER trg_before_customer_delete
+    -> BEFORE DELETE ON customer
+    -> FOR EACH ROW
+    -> BEGIN
+    ->   -- delete all issue records for this customer's memberships
+    ->   DELETE FROM iss_rec
+    ->    WHERE mem_no IN (
+    ->      SELECT mem_no
+    ->      FROM membership
+    ->      WHERE cust_no = OLD.cust_no
+    ->    );
+    ->   -- delete all membership records for this customer
+    ->   DELETE FROM membership
+    ->    WHERE cust_no = OLD.cust_no;
+    -> END$$
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> -- To test the trigger, e.g.:
+mysql> -- DELETE FROM customer WHERE cust_no = 2;
+mysql>
